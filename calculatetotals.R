@@ -34,22 +34,9 @@ gaintwoseats = 10000*apply(positives,1,occurence,2)
 loseoneseat = transneg(apply(negatives,1,occurence,-1))
 losetwoseats = transneg(apply(negatives,1,occurence,-2))
 states = read.csv('statepops2010.csv',header=F)[c(1:50),1]
-populations = states = read.csv('statepops2010.csv',header=F)[c(1:50),2]
 
 seatlosses = data.frame(states,losetwoseats,loseoneseat,gainoneseat,gaintwoseats)
 colnames(seatlosses) = c('State','Lose 2 Seats','Lose 1 Seat','Gain 1 Seat','Gain 2 Seats')
-
-seatlosses_per = seatlosses
-seatlosses_per$`Lose 2 Seats` = round((100*seatlosses_per$`Lose 2 Seats`/populations),1)
-seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
-seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
-seatlosses_per$`Gain 2 Seats` = round((100*seatlosses_per$`Gain 2 Seats`/populations),1)
-
-write.csv(seatlosses,'seatlosses.csv')
-write.csv(seatlosses_per,'seatlosses_per.csv')
-
-seatlosses_withpop = cbind(seatlosses,populations)
-write.csv(seatlosses_withpop,'seatlosses_withpop.csv')
 
 colnames(seatlosses) = c('State','-2','-1','+1','+2')
 
@@ -69,7 +56,7 @@ seats = ggplot(seats_tidy) +
   facet_wrap(~State,ncol=10) + 
   theme_calc()
 
-ggsave('gainsandlosses.jpg',seats,height=10,width=20)
+#ggsave('gainsandlosses.jpg',seats,height=10,width=20)
 
 totals_new = cbind(states,totals)
 
@@ -78,12 +65,67 @@ totals_tidy = gather(totals_new,key='key',val='val',-state)
 totals_tidy$val = factor(totals_tidy$val,levels=c(2,1,0,-1,-2))
 totals_tidy$key = as.double(totals_tidy$key)
 
-swings = ggplot(totals_tidy,aes(key,fct_rev(states))) + 
-  geom_raster(aes(fill=val)) +
-  scale_fill_manual(values=c('darkgreen','green','white','blue','darkblue')) +
-  scale_x_continuous(breaks=seq(-1000000,1000000,250000)) +
-  geom_vline(xintercept=0) +
-  theme(axis.text=element_text(size=100)) +
-  theme_calc()
+# removing gains/losses of two seats to clean up graph
 
-ggsave('state_swings.jpg',swings,height=30,width=20)
+graphing_tidy = totals_tidy
+
+graphing_tidy$val[graphing_tidy$val == 2] = 1
+graphing_tidy$val[graphing_tidy$val == -2] = -1
+graphing_tidy$val[graphing_tidy$val == 0] = NA
+
+graphing_tidy = graphing_tidy %>%
+  filter(!is.na(val))
+
+graphing_tidy$val = factor(graphing_tidy$val,levels=c(-1,1))
+graphing_tidy$val = fct_recode(graphing_tidy$val,`Lose Seat(s)` = '-1',
+                             `Gain Seat(s)` = '1')
+graphing_tidy$val[graphing_tidy$val == -1] = 'Lose Seat(s)'
+graphing_tidy$val[graphing_tidy$val == 1] = 'Gain Seat(s)'
+
+state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) + 
+  geom_tile(aes(fill=val)) +
+  scale_fill_manual(values=c('red','darkgreen')) +
+  scale_x_continuous(breaks=seq(-1000000,1000000,500000),
+                     labels = scales::comma) +
+  geom_vline(xintercept=0,color='black') +
+  xlab('Population Swing') +
+  ggtitle('Potential For Loss/Gain Of Congressional Seat In 2010') +
+  labs(subtitle='Based on Census Apportionment Population Swings') +
+  theme(axis.ticks.y= element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor.y = element_line(),
+        axis.text.x = element_text(size=45),
+        axis.text.y = element_text(size=40),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(size=50),
+        plot.title = element_text(size=60,hjust=0.5),
+        plot.subtitle = element_text(size=40,hjust=0.5),
+        legend.position = 'bottom',
+        legend.text = element_text(size=40),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.7,'in'),
+        legend.spacing.x = unit(0.5, 'in')) 
+
+#ggsave('state_swings.jpg',state_swings,height=45,width=30)
+
+
+# Adjusting seat losses to remove lose/gain 2 seats columns 
+
+seatlosses = seatlosses[,c(1,3,4)]
+colnames(seatlosses) = c('state','Lose 1 Seat','Gain 1 Seat')
+seatlosses_toprint = seatlosses
+seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
+#write.csv(seatlosses_toprint,'seatlosses.csv')
+
+# Moving to percentage of population needed for seat losses 
+
+populations = read.csv('statepops2010.csv',header=F)[c(1:50),2]
+
+seatlosses_per = seatlosses
+seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
+seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
+
+library(readxl)
+#undercount = read_excel('undercount.xlsx')
+#write.csv(seatlosses_per,'seatlosses_per.csv')
