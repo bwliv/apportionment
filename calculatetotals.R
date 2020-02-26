@@ -125,6 +125,45 @@ seatlosses_per = seatlosses
 seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
 seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
 
-library(readxl)
-#undercount = read_excel('undercount.xlsx')
-#write.csv(seatlosses_per,'seatlosses_per.csv')
+write.csv(seatlosses_per,'seatlosses_per.csv')
+
+
+ucr = seatlosses
+ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
+ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations),1)
+
+undercount = read.csv('undercount.csv',sep='',header=F)
+undercount = undercount[,7:8]
+colnames(undercount) = c('uc','RMSE')
+undercount = undercount %>% mutate(
+  upper_uc = uc + RMSE,
+  lower_uc = uc - RMSE
+)
+
+ucr = cbind(ucr,undercount)
+
+ucr$miss_gain_raw = ucr$uc > ucr$`Gain 1 Seat`
+ucr$avoided_loss = ucr$uc < ucr$`Lose 1 Seat`
+
+ucr$miss_gain_se = ucr$upper_uc > ucr$`Gain 1 Seat`
+ucr$avoided_se = ucr$lower_uc < ucr$`Lose 1 Seat`
+
+ucr_filtered_raw = ucr
+
+ucr_filtered_raw$`Lose 1 Seat` = ucr_filtered_raw$`Lose 1 Seat` * ucr_filtered_raw$avoided_loss
+ucr_filtered_raw$`Gain 1 Seat` = ucr_filtered_raw$`Gain 1 Seat` * ucr_filtered_raw$miss_gain_raw
+ucr_filtered_raw = ucr_filtered_raw[ucr_filtered_raw$`Lose 1 Seat` < 0 | ucr_filtered_raw$`Gain 1 Seat` > 0,]
+ucr_filtered_raw = ucr_filtered_raw[!is.na(ucr_filtered_raw$uc),]
+ucr_filtered_raw = ucr_filtered_raw[,1:4]
+
+ucr_filtered_se = ucr
+ucr_filtered_se$`Lose 1 Seat` = ucr_filtered_se$`Lose 1 Seat` * ucr_filtered_se$avoided_se
+ucr_filtered_se$`Gain 1 Seat` = ucr_filtered_se$`Gain 1 Seat` * ucr_filtered_se$miss_gain_se
+ucr_filtered_se = ucr_filtered_se[ucr_filtered_se$`Lose 1 Seat` | ucr_filtered_se$`Gain 1 Seat` > 0,]
+ucr_filtered_raw = ucr_filtered_se[!is.na(ucr_filtered_raw$se),]
+ucr_filtered_se = ucr_filtered_se[,1:4]
+
+write.csv(ucr_filtered_raw,'state_pers_within_uc.csv')
+
+write.csv(ucr_filtered_se,'state_pers_within_uc_se.csv')
+
