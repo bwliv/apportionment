@@ -1,20 +1,19 @@
 totals = read.csv('seat_loss_gain.csv')
 totals = totals[,-1]
-rownames(totals) = totals$NA.
+rownames(totals) = totals$state
+totals = totals[,-1]
 intervals = seq(-1000000,1000000,10000)
 names = intervals
 names(totals) = names
 
-totals
-
-positives = totals[,c(102:201)]
+positives = totals[,c(101:201)]
 negatives = totals[,c(1:100)]
 
 library(dplyr)
 
 occurence = function(row,val){
   occurs = which(row %in% val)
-  if (val>0){
+  if (val>=0){
     return(occurs[1])
   } else if (val<0){
     if(length(occurs)>0){
@@ -88,19 +87,19 @@ state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) +
   scale_x_continuous(breaks=seq(-1000000,1000000,500000),
                      labels = scales::comma) +
   geom_vline(xintercept=0,color='black') +
-  xlab('Population Swing') +
-  ggtitle('Potential For Loss/Gain Of Congressional Seat In 2010') +
+  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
+  ggtitle('How Close States Came To Gaining/Losing Congressional Seat In 2010') +
   labs(subtitle='Based on Census Apportionment Population Swings') +
   theme(axis.ticks.y= element_blank(),
         panel.grid = element_blank(),
         panel.background = element_blank(),
         panel.grid.minor.y = element_line(),
-        axis.text.x = element_text(size=45),
+        axis.text.x = element_text(size=40),
         axis.text.y = element_text(size=40),
         axis.title.y = element_blank(),
-        axis.title.x = element_text(size=50),
-        plot.title = element_text(size=60,hjust=0.5),
-        plot.subtitle = element_text(size=40,hjust=0.5),
+        axis.title.x = element_text(size=55),
+        plot.title = element_text(size=55,hjust=0.5),
+        plot.subtitle = element_text(size=50,hjust=0.5),
         legend.position = 'bottom',
         legend.text = element_text(size=40),
         legend.title = element_blank(),

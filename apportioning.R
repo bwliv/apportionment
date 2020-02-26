@@ -4,8 +4,8 @@ mult = function(n,m){
 }
 
 states_org = read.csv('statepops2010.csv',header=F,stringsAsFactors = F)
-states_org = states[1:50,1:2]
-states_org = cbind(states,rep(1,50))
+states_org = states_org[1:50,1:2]
+states_org = cbind(states_org,rep(1,50))
 names(states_org) = c('state','population','seats')
 
 popjump = function(jump,statenum){
@@ -24,7 +24,7 @@ popjump = function(jump,statenum){
   
   for (i in 1:385){
     orgind = which.max(statlist)
-    ind = orgind %% 50
+    ind = ifelse(orgind %% 50 == 0, 50, orgind %% 50)
     states[ind,'seats'] = states[ind,'seats'] + 1
     statlist[orgind] = 0
   }
@@ -47,7 +47,7 @@ popjump = function(jump,statenum){
   
   for (i in 1:385){
     orgind = which.max(statlist)
-    ind = orgind %% 50
+    ind = ifelse(orgind %% 50 == 0, 50, orgind %% 50)
     states[ind,'seats'] = states[ind,'seats'] + 1
     statlist[orgind] = 0
   }
@@ -58,7 +58,6 @@ popjump = function(jump,statenum){
   return(diff)
 }
 
-
 states = read.csv('statepops2010.csv',header=F,stringsAsFactors = F)
 states = states[1:50,1:2]
 states = cbind(states,rep(1,50))
@@ -68,11 +67,16 @@ totals = data.frame(states['state'])
 
 intervals = seq(-1000000,1000000,10000)
 
+progress = 0
+
 for (chg in intervals){
 changes = vector()
 for (statenum in 1:50){
+  progress = progress + 1
   changes = c(changes,popjump(chg,statenum))
-  print(paste0('state # :',statenum,'... add/drop:',chg))
+  print(paste0('Progress: ',
+               100*round((progress / (length(intervals) * 50)),3),
+               '%'))
 }
 totals = cbind(totals,changes)
 }
