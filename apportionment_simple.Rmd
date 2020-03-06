@@ -1,0 +1,238 @@
+---
+title: "How Census Undercounts Shaped Congressional Apportionment In 2010"
+author: "By Benjamin Livingston & Bernardo Lopez Vicencio, *[NewsCounts](https://newscounts.org/)*"
+date: 
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE,message=FALSE)
+```
+
+#### **Please note this is the general journalists' version. Data journalists curious for more information may access our more detailed description here (ADD HYPERLINK).**
+
+# Introduction
+
+In order to illustrate the consequences of undercounts in the 2010 US Census, *NewsCounts*' data scientists examined how census count swings could have either given an individual state an additional congressional representative, or conversely may have cost a state a chance at another representative.
+
+To do this, they calculated the number of approximate number of residents each state would have needed to gain according the [official census apportionment population count and algorithm](https://www.census.gov/prod/cen2010/briefs/c2010br-08.pdf) to add an additional congressional representative in the 2010s, and how much of a population dip it would have taken for the state to have one fewer representative. 
+
+# Results
+
+These numbers are presented in tables both in terms of raw population numbers and in terms of state population percentages. Necessary population increases/decreases were rounded up to the nearest 10,000, and this is reflected in the percentages as well - so if a state would have lost a seat with a population decrease of 16,734 (2.1% of the population), this would be reflected as 20,000 (2.5% of the population). 
+
+Our findings are presented in the graph below.
+
+```{r fig.height=45,fig.width=30}
+totals = read.csv('seat_loss_gain.csv')
+totals = totals[,-1]
+rownames(totals) = totals$state
+totals = totals[,-1]
+intervals = seq(-1000000,1000000,10000)
+names = intervals
+names(totals) = names
+
+positives = totals[,c(101:201)]
+negatives = totals[,c(1:100)]
+
+library(dplyr)
+
+occurence = function(row,val){
+  occurs = which(row %in% val)
+  if (val>=0){
+    return(occurs[1])
+  } else if (val<0){
+    if(length(occurs)>0){
+    return(occurs[length(occurs)])
+    } else{
+      return(NA)
+    }
+  }
+}
+
+transneg = function(val){
+  return(-(1000000-(10000*(val-1))))
+}
+
+gainoneseat = 10000*apply(positives,1,occurence,1)
+gaintwoseats = 10000*apply(positives,1,occurence,2)
+loseoneseat = transneg(apply(negatives,1,occurence,-1))
+losetwoseats = transneg(apply(negatives,1,occurence,-2))
+states = read.csv('statepops2010.csv',header=F)[c(1:50),1]
+
+seatlosses = data.frame(states,losetwoseats,loseoneseat,gainoneseat,gaintwoseats)
+colnames(seatlosses) = c('State','Lose 2 Seats','Lose 1 Seat','Gain 1 Seat','Gain 2 Seats')
+
+colnames(seatlosses) = c('State','-2','-1','+1','+2')
+
+library(tidyr)
+library(ggplot2)
+library(forcats)
+library(ggthemes)
+
+totals_new = cbind(states,totals)
+
+totals_tidy = gather(totals_new,key='key',val='val',-states)
+
+totals_tidy$val = factor(totals_tidy$val,levels=c(2,1,0,-1,-2))
+totals_tidy$key = as.double(totals_tidy$key)
+
+# removing gains/losses of two seats to clean up graph
+
+graphing_tidy = totals_tidy
+
+graphing_tidy$val[graphing_tidy$val == 2] = 1
+graphing_tidy$val[graphing_tidy$val == -2] = -1
+graphing_tidy$val[graphing_tidy$val == 0] = NA
+
+graphing_tidy = graphing_tidy %>%
+  filter(!is.na(val))
+
+graphing_tidy$val = factor(graphing_tidy$val,levels=c(-1,1))
+graphing_tidy$val = fct_recode(graphing_tidy$val,`Lose Seat(s)` = '-1',
+                             `Gain Seat(s)` = '1')
+graphing_tidy$val[graphing_tidy$val == -1] = 'Lose Seat(s)'
+graphing_tidy$val[graphing_tidy$val == 1] = 'Gain Seat(s)'
+
+state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) + 
+  geom_tile(aes(fill=val)) +
+  scale_fill_manual(values=c('red','darkgreen')) +
+  scale_x_continuous(breaks=seq(-1000000,1000000,500000),
+                     labels = scales::comma) +
+  geom_vline(xintercept=0,color='black') +
+  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
+  ggtitle('How Close States Came To Gaining/Losing Congressional Seat In 2010') +
+  labs(subtitle='Based on Census Apportionment Population Swings') +
+  theme(axis.ticks.y= element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor.y = element_line(),
+        axis.text.x = element_text(size=40),
+        axis.text.y = element_text(size=40),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(size=55),
+        plot.title = element_text(size=55,hjust=0.5),
+        plot.subtitle = element_text(size=50,hjust=0.5),
+        legend.position = 'bottom',
+        legend.text = element_text(size=40),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.7,'in'),
+        legend.spacing.x = unit(0.5, 'in')) 
+
+state_swings
+```
+
+The following table provides a raw numerical look at how much population each state would have needed to gain or lose to add or remove a congressional seat in 2010 (again rounding the loss/gain up to the nearest 10,000). States marked with NA did not have a seat to lose. 
+
+```{r}
+seatlosses = seatlosses[,c(3,4)]
+colnames(seatlosses) = c('Lose 1 Seat','Gain 1 Seat')
+seatlosses_toprint = seatlosses
+seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
+
+seatlosses_toprint
+```
+
+Here is the same information presented in percentage terms, with the same rounding up to the nearest 10,000 in raw population performed.
+
+Here, you can see more clearly that some states came *very* close to falling short of an extra seat or avoiding the loss of an extra seat.
+
+```{r}
+
+populations = read.csv('statepops2010.csv',header=F)[c(1:50),2]
+
+seatlosses_per = seatlosses
+seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
+seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
+
+seatlosses_per
+```
+
+# The Impact Of Undercounting
+
+Next, by infusing [information about the degrees of undercounts in various states](https://www.census.gov/coverage_measurement/pdfs/g01.pdf), we were able to determine which of these percentages is within the range of a potential undercount.
+
+These calculations are presented in more detail in our version of this article for data journalists (see the link at the top of the page), but the code can be accessed below for curious parties.
+
+```{r}
+ucr = seatlosses
+ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
+ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations),1)
+
+undercount = read.csv('undercount.csv',sep='',header=F)
+undercount = undercount[,7:8]
+colnames(undercount) = c('uc','RMSE')
+
+ucr = cbind(ucr,undercount)
+
+ucr$miss_gain_raw = ucr$uc > ucr$`Gain 1 Seat`
+ucr$avoided_loss = ucr$uc < ucr$`Lose 1 Seat`
+
+ucr_filtered_raw = ucr
+
+ucr_filtered_raw$`Lose 1 Seat` = ucr_filtered_raw$`Lose 1 Seat` * ucr_filtered_raw$avoided_loss
+ucr_filtered_raw$`Gain 1 Seat` = ucr_filtered_raw$`Gain 1 Seat` * ucr_filtered_raw$miss_gain_raw
+ucr_filtered_raw = ucr_filtered_raw[ucr_filtered_raw$`Lose 1 Seat` < 0 | ucr_filtered_raw$`Gain 1 Seat` > 0,]
+ucr_filtered_raw = ucr_filtered_raw[!is.na(ucr_filtered_raw$uc),]
+ucr_filtered_raw = ucr_filtered_raw[,1:3]
+ucr_filtered_raw$`Lose 1 Seat` = ifelse(ucr_filtered_raw$`Lose 1 Seat` == 0, '--',ucr_filtered_raw$`Lose 1 Seat`)
+ucr_filtered_raw$`Gain 1 Seat` = ifelse(ucr_filtered_raw$`Gain 1 Seat` == 0, '--',ucr_filtered_raw$`Gain 1 Seat`)
+
+ucr = seatlosses
+ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
+ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations),1)
+
+ME = pnorm(1) - .5
+
+undercount = read.csv('undercount.csv',sep='',header=F)
+undercount = undercount[,7:8]
+colnames(undercount) = c('uc','RMSE')
+undercount = undercount %>% mutate(
+    lower_uc = round(uc - qnorm(.5 + ME)*RMSE,2),
+    upper_uc = round(uc + qnorm(.5 + ME)*RMSE,2)
+)
+
+ucr = cbind(ucr,undercount)
+
+ucr$miss_gain_se = ucr$upper_uc > ucr$`Gain 1 Seat`
+ucr$avoided_se = ucr$lower_uc < ucr$`Lose 1 Seat`
+
+ucr_filtered_se = ucr
+ucr_filtered_se$`Lose 1 Seat` = ucr_filtered_se$`Lose 1 Seat` * ucr_filtered_se$avoided_se
+ucr_filtered_se$`Gain 1 Seat` = ucr_filtered_se$`Gain 1 Seat` * ucr_filtered_se$miss_gain_se
+ucr_filtered_se = ucr_filtered_se[ucr_filtered_se$`Lose 1 Seat` <0 | ucr_filtered_se$`Gain 1 Seat` > 0,]
+ucr_filtered_se = ucr_filtered_se[!is.na(ucr_filtered_se$uc),]
+ucr_filtered_se = ucr_filtered_se[,c(1:6)]
+ucr_filtered_se$`Lose 1 Seat` = ifelse(ucr_filtered_se$`Lose 1 Seat` == 0, '--',ucr_filtered_se$`Lose 1 Seat`)
+ucr_filtered_se$`Gain 1 Seat` = ifelse(ucr_filtered_se$`Gain 1 Seat` == 0, '--',ucr_filtered_se$`Gain 1 Seat`)
+```
+
+### Definitive Gains/Losses
+
+First, we will determine which states appeared to miss out on adding a congressional seat because of an undercount, and which states appeared to gain a congressional seat because of an overcount (which could be viewed as a product of undercount mitigation).
+
+Based on all the information we gathered, it appears a few states may have gained or lost out on a seat because of their undercount (or a lack thereof).
+
+**Minnesota** - [which famously nearly lost a congressional seat in 2010](https://www.minnpost.com/politics-policy/2010/12/census-numbers-released-minnesota-retains-all-eight-congressional-districts/) - was overcounted by .56%, and yet would have lost a seat with .2% fewer people. Thus, avoiding an undercount seemed to allow Minnesota to retain a congressional seat.
+
+**North Carolina**, meanwhile, would have gained a congressional seat with only .3% higher of a population, but was undercounted by .52% - meaning North Carolina likely lost out on an additional seat in 2010 because of an undercount - [although there are high hopes for this to be rectified in 2020](https://www.newsobserver.com/news/local/article223255775.html).
+
+### Within Margin Of Error
+
+Next, we will factor in margin of error, and consider which states *may* have lost a seat because of an undercount, and which states *may* have gained a seat because of an overcount.
+
+We used a +/-34% margin of error (see the data journalist's version of this article - linked to at the top of this one - for more detailed information and the reasoning behind this decision)
+
+Judging by our results, **California** may have avoided losing a congressional seat because of a lack of an undercount. It was undercounted by .26%, but our margin of error suggests it's reasonable to assume that it may have been overcounted by as much as .47% - and it came just .3% of population away from having one fewer congressional seat. So it's quite possible that mitigating an undercount saved California from losing a congressional seat.
+
+**Washington state** is in the same boat as California. We estimate that Washington came .4% of population loss away from losing a congressional seat, but it's reasonable to assume that it may have been overcounted by as much as 1.24% - so perhaps mitigating an undercount saved Washington the loss of a seat as well.
+
+Finally, it seems that **Missouri** potentially missed out on an additional seat because of an undercount. It was apparently overcounted by .66%, but we find it reasonable to assume that it may have been undercounted by .53% - which would have been enough to cost it the .5% population jump it needed to secure another seat.
+
+We are quite happy to develop more precise numbers for your state, and help to calculate the percentage chance that it gained or lost out on a congressional seat because of census response rates (contact details below).
+
+# Want More?
+
+NewsCounts is happy to offer this data, answer any questions you may have about the information or the methodology, and offer help tailoring this dataset/simulation for your newsroom. Feel free to email [benjamin.livingston@columbia.edu](mailto:benjamin.livingston@columbia.edu) or post on the NewsCounts Slack channel (email Benjamin for an invite!) any time for help. 
