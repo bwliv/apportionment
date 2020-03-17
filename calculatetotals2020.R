@@ -57,43 +57,43 @@ seats = ggplot(seats_tidy) +
 
 ggsave('gainsandlosses2018.jpg',seats,height=10,width=20)
 
-totals_new = cbind(states,totals)
 
-totals_tidy = gather(totals_new,key='key',val='val',-state)
 
-totals_tidy$val = factor(totals_tidy$val,levels=c(2,1,0,-1,-2))
-totals_tidy$key = as.double(totals_tidy$key)
+# Adjusting seat losses to remove lose/gain 2 seats columns 
 
-# removing gains/losses of two seats to clean up graph
+seatlosses = seatlosses[,c(3,4)]
+colnames(seatlosses) = c('state','Lose 1 Seat','Gain 1 Seat')
+seatlosses_toprint = seatlosses
+seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
+write.csv(seatlosses_toprint,'seatlosses2018.csv')
 
-graphing_tidy = totals_tidy
 
-graphing_tidy$val[graphing_tidy$val == 2] = 1
-graphing_tidy$val[graphing_tidy$val == -2] = -1
-graphing_tidy$val[graphing_tidy$val == 0] = NA
+# Moving to percentage of population needed for seat losses 
 
-graphing_tidy = graphing_tidy %>%
-  filter(!is.na(val))
+populations = read.csv('2018ACS.csv',header=F)[c(1:50),2]
 
-graphing_tidy$val = factor(graphing_tidy$val,levels=c(-1,1))
-graphing_tidy$val = fct_recode(graphing_tidy$val,`Lose Seat(s)` = '-1',
-                             `Gain Seat(s)` = '1')
-graphing_tidy$val[graphing_tidy$val == -1] = 'Lose Seat(s)'
-graphing_tidy$val[graphing_tidy$val == 1] = 'Gain Seat(s)'
+seatlosses_per = seatlosses
+seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
+seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
 
-state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) + 
-  geom_tile(aes(fill=val)) +
-  scale_fill_manual(values=c('red','darkgreen')) +
-  scale_x_continuous(breaks=seq(-1000000,1000000,500000),
-                     labels = scales::comma) +
+write.csv(seatlosses_per,'seatlosses_per2018.csv')
+
+graphing_tidy = gather(seatlosses_per,key='key',val='val',-state)
+graphing_tidy$val = graphing_tidy$val/100
+
+state_swings = ggplot(graphing_tidy) + 
+  geom_point(aes(y=fct_rev(state),x=val,color=fct_rev(key)),size=15) +
+  scale_color_manual(values=c('blue4','orangered3')) +
+  coord_cartesian(c(-.1,.1)) +
+  scale_x_continuous(breaks=seq(-.1,.1,.05),
+                     labels = scales::percent) +
   geom_vline(xintercept=0,color='black') +
-  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
+  xlab('Swing Needed From 2018 Population To Add/Drop Seat(s)') +
   ggtitle('How Close States Are To Gaining/Losing Congressional Seat In 2020') +
   labs(subtitle='Based on 2018 ACS Population Estimates') +
   theme(axis.ticks.y= element_blank(),
-        panel.grid = element_blank(),
+        panel.grid.major.y = element_line(size=2,color='gray80'),
         panel.background = element_blank(),
-        panel.grid.minor.y = element_line(),
         axis.text.x = element_text(size=40),
         axis.text.y = element_text(size=40),
         axis.title.y = element_blank(),
@@ -108,25 +108,6 @@ state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) +
 
 ggsave('state_swings2018.jpg',state_swings,height=45,width=30)
 
-
-# Adjusting seat losses to remove lose/gain 2 seats columns 
-
-seatlosses = seatlosses[,c(1,3,4)]
-colnames(seatlosses) = c('state','Lose 1 Seat','Gain 1 Seat')
-seatlosses_toprint = seatlosses
-seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
-write.csv(seatlosses_toprint,'seatlosses2018.csv')
-
-# Moving to percentage of population needed for seat losses 
-
-populations = read.csv('2018ACS.csv',header=F)[c(1:50),2]
-
-seatlosses_per = seatlosses
-seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
-seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
-
-write.csv(seatlosses_per,'seatlosses_per2018.csv')
-
 ucr = seatlosses
 ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
 ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations),1)
@@ -137,7 +118,7 @@ colnames(undercount) = c('uc','RMSE')
 
 ucr = cbind(ucr,undercount)
 
-ucr$miss_gain_raw = ucr$uc > ucr$`Gain 1 Seat`
+ucr$miss_gain_raw = (-1) * ucr$uc > ucr$`Gain 1 Seat`
 ucr$avoided_loss = ucr$uc < ucr$`Lose 1 Seat`
 
 ucr_filtered_raw = ucr
@@ -166,8 +147,8 @@ undercount = undercount %>% mutate(
 
 ucr = cbind(ucr,undercount)
 
-ucr$miss_gain_se = ucr$upper_uc > ucr$`Gain 1 Seat`
-ucr$avoided_se = ucr$lower_uc < ucr$`Lose 1 Seat`
+ucr$miss_gain_se = (-1) * ucr$uc > ucr$`Gain 1 Seat`
+ucr$avoided_se = ucr$uc < ucr$`Lose 1 Seat`
 
 ucr_filtered_se = ucr
 ucr_filtered_se$`Lose 1 Seat` = ucr_filtered_se$`Lose 1 Seat` * ucr_filtered_se$avoided_se

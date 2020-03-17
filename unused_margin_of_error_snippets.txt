@@ -1,0 +1,67 @@
+### Within Margin Of Error
+
+Next, we will factor in margin of error, and consider which states *may* have lost a seat because of an undercount, and which states *may* have gained a seat because of an overcount.
+
+To do this, we generated a margin of error using the official RMSE (root mean square error) quoted in the undercount report, and used this as a means of figuring which states may have *potentially* fit this criteria. We used a margin of error of a single standard error (utilizing the census' official stated RMSE values), which is akin to a +/-34% margin of error.
+
+```{r}
+ucr = seatlosses
+ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
+ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations),1)
+
+ME = pnorm(1) - .5
+
+undercount = read.csv('undercount.csv',sep='',header=F)
+undercount = undercount[,7:8]
+colnames(undercount) = c('uc','RMSE')
+undercount = undercount %>% mutate(
+    lower_uc = round(uc - qnorm(.5 + ME)*RMSE,2),
+    upper_uc = round(uc + qnorm(.5 + ME)*RMSE,2)
+)
+
+ucr = cbind(ucr,undercount)
+
+ucr$miss_gain_se = ucr$upper_uc > ucr$`Gain 1 Seat`
+ucr$avoided_se = ucr$lower_uc < ucr$`Lose 1 Seat`
+
+ucr_filtered_se = ucr
+ucr_filtered_se$`Lose 1 Seat` = ucr_filtered_se$`Lose 1 Seat` * ucr_filtered_se$avoided_se
+ucr_filtered_se$`Gain 1 Seat` = ucr_filtered_se$`Gain 1 Seat` * ucr_filtered_se$miss_gain_se
+ucr_filtered_se = ucr_filtered_se[ucr_filtered_se$`Lose 1 Seat` <0 | ucr_filtered_se$`Gain 1 Seat` > 0,]
+ucr_filtered_se = ucr_filtered_se[!is.na(ucr_filtered_se$uc),]
+ucr_filtered_se = ucr_filtered_se[,c(1:6)]
+ucr_filtered_se$`Lose 1 Seat` = ifelse(ucr_filtered_se$`Lose 1 Seat` == 0, '--',ucr_filtered_se$`Lose 1 Seat`)
+ucr_filtered_se$`Gain 1 Seat` = ifelse(ucr_filtered_se$`Gain 1 Seat` == 0, '--',ucr_filtered_se$`Gain 1 Seat`)
+
+ucr_filtered_se
+```
+
+Minnesota and North Carolina have already been addressed, but three more states make an appearance here. 
+
+Judging by these results, **California** may have avoided losing a congressional seat because of a lack of an undercount. It was undercounted by .26%, but our margin of error suggests it's reasonable to assume that it may have been overcounted by as much as .47% - and it came just .3% of population away from having one fewer congressional seat. So it's quite possible that mitigating an undercount saved California from losing a congressional seat.
+
+**Washington state** is in the same boat as California. We estimate that Washington came .4% of population loss away from losing a congressional seat, but it's reasonable to assume that it may have been overcounted by as much as 1.24% - so perhaps mitigating an undercount saved Washington the loss of a seat as well.
+
+Finally, it seems that **Missouri** potentially missed out on an additional seat because of an undercount. It was apparently overcounted by .66%, but we find it reasonable to assume that it may have been undercounted by .53% - which would have been enough to cost it the .5% population jump it needed to secure another seat.
+
+We are quite happy to develop more precise numbers for your state, and help to calculate the percentage chance that it gained or lost out on a congressional seat because of census response rates (contact details below).
+
+
+
+------------------
+
+
+
+### Within Margin Of Error
+
+Next, we will factor in margin of error, and consider which states *may* have lost a seat because of an undercount, and which states *may* have gained a seat because of an overcount.
+
+We used a +/-34% margin of error (see the data journalist's version of this article - linked to at the top of this one - for more detailed information and the reasoning behind this decision)
+
+Judging by our results, **California** may have avoided losing a congressional seat because of a lack of an undercount. It was undercounted by .26%, but our margin of error suggests it's reasonable to assume that it may have been overcounted by as much as .47% - and it came just .3% of population away from having one fewer congressional seat. So it's quite possible that mitigating an undercount saved California from losing a congressional seat.
+
+**Washington state** is in the same boat as California. We estimate that Washington came .4% of population loss away from losing a congressional seat, but it's reasonable to assume that it may have been overcounted by as much as 1.24% - so perhaps mitigating an undercount saved Washington the loss of a seat as well.
+
+Finally, it seems that **Missouri** potentially missed out on an additional seat because of an undercount. It was apparently overcounted by .66%, but we find it reasonable to assume that it may have been undercounted by .53% - which would have been enough to cost it the .5% population jump it needed to secure another seat.
+
+We are quite happy to develop more precise numbers for your state, and help to calculate the percentage chance that it gained or lost out on a congressional seat because of census response rates (contact details below).

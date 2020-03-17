@@ -55,58 +55,7 @@ seats = ggplot(seats_tidy) +
   facet_wrap(~State,ncol=10) + 
   theme_calc()
 
-#ggsave('gainsandlosses.jpg',seats,height=10,width=20)
-
-totals_new = cbind(states,totals)
-
-totals_tidy = gather(totals_new,key='key',val='val',-state)
-
-totals_tidy$val = factor(totals_tidy$val,levels=c(2,1,0,-1,-2))
-totals_tidy$key = as.double(totals_tidy$key)
-
-# removing gains/losses of two seats to clean up graph
-
-graphing_tidy = totals_tidy
-
-graphing_tidy$val[graphing_tidy$val == 2] = 1
-graphing_tidy$val[graphing_tidy$val == -2] = -1
-graphing_tidy$val[graphing_tidy$val == 0] = NA
-
-graphing_tidy = graphing_tidy %>%
-  filter(!is.na(val))
-
-graphing_tidy$val = factor(graphing_tidy$val,levels=c(-1,1))
-graphing_tidy$val = fct_recode(graphing_tidy$val,`Lose Seat(s)` = '-1',
-                             `Gain Seat(s)` = '1')
-graphing_tidy$val[graphing_tidy$val == -1] = 'Lose Seat(s)'
-graphing_tidy$val[graphing_tidy$val == 1] = 'Gain Seat(s)'
-
-state_swings = ggplot(graphing_tidy,aes(key,fct_rev(states))) + 
-  geom_tile(aes(fill=val)) +
-  scale_fill_manual(values=c('red','darkgreen')) +
-  scale_x_continuous(breaks=seq(-1000000,1000000,500000),
-                     labels = scales::comma) +
-  geom_vline(xintercept=0,color='black') +
-  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
-  ggtitle('How Close States Came To Gaining/Losing Congressional Seat In 2010') +
-  labs(subtitle='Based on Census Apportionment Population Swings') +
-  theme(axis.ticks.y= element_blank(),
-        panel.grid = element_blank(),
-        panel.background = element_blank(),
-        panel.grid.minor.y = element_line(),
-        axis.text.x = element_text(size=40),
-        axis.text.y = element_text(size=40),
-        axis.title.y = element_blank(),
-        axis.title.x = element_text(size=55),
-        plot.title = element_text(size=55,hjust=0.5),
-        plot.subtitle = element_text(size=50,hjust=0.5),
-        legend.position = 'bottom',
-        legend.text = element_text(size=40),
-        legend.title = element_blank(),
-        legend.key.size = unit(0.7,'in'),
-        legend.spacing.x = unit(0.5, 'in')) 
-
-#ggsave('state_swings.jpg',state_swings,height=45,width=30)
+ggsave('gainsandlosses.jpg',seats,height=10,width=20)
 
 
 # Adjusting seat losses to remove lose/gain 2 seats columns 
@@ -126,6 +75,37 @@ seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populatio
 seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
 
 write.csv(seatlosses_per,'seatlosses_per.csv')
+
+graphing_tidy = gather(seatlosses_per,key='key',val='val',-state)
+graphing_tidy$val = graphing_tidy$val/100
+
+state_swings = ggplot(graphing_tidy) + 
+  geom_point(aes(y=fct_rev(state),x=val,color=fct_rev(key)),size=15) +
+  scale_color_manual(values=c('blue4','orangered3')) +
+  coord_cartesian(c(-.11,.11)) +
+  scale_x_continuous(breaks=seq(-.1,.1,.05),
+                     labels = scales::percent) +
+  geom_vline(xintercept=0,color='black') +
+  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
+  ggtitle('How Close States Came To Gaining/Losing Congressional Seat In 2010') +
+  labs(subtitle='Based on Theoretical Census Apportionment Population Swings') +
+  theme(axis.ticks.y= element_blank(),
+        panel.grid.major.y = element_line(size=2,color='gray80'),
+        panel.background = element_blank(),
+        axis.text.x = element_text(size=40),
+        axis.text.y = element_text(size=40),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(size=55),
+        plot.title = element_text(size=55,hjust=0.5),
+        plot.subtitle = element_text(size=50,hjust=0.5),
+        legend.position = 'bottom',
+        legend.text = element_text(size=40),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.7,'in'),
+        legend.spacing.x = unit(0.5, 'in')) 
+
+ggsave('state_swings.jpg',state_swings,height=45,width=30)
+
 
 ucr = seatlosses
 ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations),1)
@@ -178,7 +158,7 @@ ucr_filtered_se = ucr_filtered_se[,c(2:7)]
 ucr_filtered_se$`Lose 1 Seat` = ifelse(ucr_filtered_se$`Lose 1 Seat` == 0, '--',ucr_filtered_se$`Lose 1 Seat`)
 ucr_filtered_se$`Gain 1 Seat` = ifelse(ucr_filtered_se$`Gain 1 Seat` == 0, '--',ucr_filtered_se$`Gain 1 Seat`)
 
-#write.csv(ucr_filtered_raw,'state_pers_within_uc.csv')
+write.csv(ucr_filtered_raw,'state_pers_within_uc.csv')
 
-#write.csv(ucr_filtered_se,'state_pers_within_uc_se.csv')
+write.csv(ucr_filtered_se,'state_pers_within_uc_se.csv')
 

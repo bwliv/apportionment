@@ -1,6 +1,6 @@
 ---
-title: "How Census Undercounts Shaped Congressional Apportionment In 2010"
-author: "By Benjamin Livingston & Bernardo Lopez Vicencio, *[NewsCounts](https://newscounts.org/)*"
+title: "A Guide To Using Congressional Apportionment Data In Census News Stories"
+author: "By Benjamin Livingston, *[NewsCounts](https://newscounts.org/)*"
 date: 
 output: 
   html_document:
@@ -11,21 +11,37 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE,message=FALSE)
 ```
 
-#### **Please note this is the general journalists' version. Data journalists curious for more information may access our more detailed description here (ADD HYPERLINK).**
+
+##### **Please note this is the general journalists' version. Data journalists curious for more information may access our more detailed description here (ADD HYPERLINK).**
+
 
 # Introduction
 
-In order to illustrate the consequences of undercounts in the 2010 US Census, *NewsCounts*' data scientists examined how census count swings could have either given an individual state an additional congressional representative, or conversely may have cost a state a chance at another representative.
+In order to illustrate the consequences of undercounts in the 2010 and 2020 US Census, *NewsCounts* examined how census count swings could have either given an individual state an additional congressional representative, or conversely may have cost a state a chance at another representative in 2010 - and then performed the same analysis for 2020 using population projections.
 
 To do this, they calculated the number of approximate number of residents each state would have needed to gain according the [official census apportionment population count and algorithm](https://www.census.gov/prod/cen2010/briefs/c2010br-08.pdf) to add an additional congressional representative in the 2010s, and how much of a population dip it would have taken for the state to have one fewer representative. 
 
-# Results
+We then conducted the same analysis for 2020 using state population estimates from the 2018 American Community Survey, in order to preview which states may gain or lose congressional seats in 2020 because of census undercounts or the mitigation of undercounts.
+
+*We will present the findings here, and at the end, provide a road map for using them in an article.*
+
+### 2010 Results: Seats Nearly Gained Or Lost
+
+We will now present the results of our simulation for 2010.
 
 These numbers are presented in tables both in terms of raw population numbers and in terms of state population percentages. Necessary population increases/decreases were rounded up to the nearest 10,000, and this is reflected in the percentages as well - so if a state would have lost a seat with a population decrease of 16,734 (2.1% of the population), this would be reflected as 20,000 (2.5% of the population). 
 
-Our findings are presented in the graph below.
+First, we will visualize the results in the graph below. This graph shows how close each state came to gaining or losing a congressional seat as a percentage of its total population.
+
+States not shown either did not have a state to lose, or would have required too large of a population dip or jump to be shown on this graph.
 
 ```{r fig.height=45,fig.width=30}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(forcats)
+library(ggthemes)
+
 totals = read.csv('seat_loss_gain.csv')
 totals = totals[,-1]
 rownames(totals) = totals$state
@@ -57,15 +73,89 @@ transneg = function(val){
 }
 
 gainoneseat = 10000*apply(positives,1,occurence,1)
-gaintwoseats = 10000*apply(positives,1,occurence,2)
 loseoneseat = transneg(apply(negatives,1,occurence,-1))
-losetwoseats = transneg(apply(negatives,1,occurence,-2))
 states = read.csv('statepops2010.csv',header=F)[c(1:50),1]
 
-seatlosses = data.frame(states,losetwoseats,loseoneseat,gainoneseat,gaintwoseats)
-colnames(seatlosses) = c('State','Lose 2 Seats','Lose 1 Seat','Gain 1 Seat','Gain 2 Seats')
+seatlosses = data.frame(states,loseoneseat,gainoneseat)
 
-colnames(seatlosses) = c('State','-2','-1','+1','+2')
+colnames(seatlosses) = c('state','Lose 1 Seat','Gain 1 Seat')
+
+populations = read.csv('statepops2010.csv',header=F)[c(1:50),2]
+
+seatlosses_per = seatlosses
+seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
+seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
+
+
+graphing_tidy = gather(seatlosses_per,key='key',val='val',-state)
+graphing_tidy$val = graphing_tidy$val/100
+
+state_swings = ggplot(graphing_tidy) + 
+  geom_point(aes(y=fct_rev(state),x=val,color=fct_rev(key)),size=15) +
+  scale_color_manual(values=c('blue4','orangered3')) +
+  coord_cartesian(c(-.11,.11)) +
+  scale_x_continuous(breaks=seq(-.1,.1,.05),
+                     labels = scales::percent) +
+  geom_vline(xintercept=0,color='black') +
+  xlab('Swing Needed From 2010 Population To Add/Drop Seat(s)') +
+  ggtitle('How Close States Came To Gaining/Losing Congressional Seat In 2010') +
+  labs(subtitle='Based on Theoretical Census Apportionment Population Swings') +
+  theme(axis.ticks.y= element_blank(),
+        panel.grid.major.y = element_line(size=2,color='gray80'),
+        panel.background = element_blank(),
+        axis.text.x = element_text(size=40),
+        axis.text.y = element_text(size=40),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(size=55),
+        plot.title = element_text(size=55,hjust=0.5),
+        plot.subtitle = element_text(size=50,hjust=0.5),
+        legend.position = 'bottom',
+        legend.text = element_text(size=40),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.7,'in'),
+        legend.spacing.x = unit(0.5, 'in')) 
+
+state_swings
+```
+
+The following table provides a raw numerical look at how much population each state would have needed to gain or lose to add or remove a congressional seat in 2010 (again rounding the loss/gain up to the nearest 10,000). States marked with NA did not have a seat to lose. 
+
+```{r}
+seatlosses_toprint = seatlosses[c(2,3)]
+seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
+
+seatlosses_toprint
+```
+
+Here is the same information presented in percentage terms, with the same rounding up to the nearest 10,000 in raw population performed.
+
+Here, you can see more clearly that some states came *very* close to falling short of an extra seat or avoiding the loss of an extra seat.
+
+```{r}
+seatlosses_per[c(2,3)]
+```
+
+### 2010 Results: Seats Nearly Gained Or Lost
+
+We will now present the results of our simulation for 2010.
+
+These numbers are presented in tables both in terms of raw population numbers and in terms of state population percentages. Necessary population increases/decreases were rounded up to the nearest 10,000, and this is reflected in the percentages as well - so if a state would have lost a seat with a population decrease of 16,734 (2.1% of the population), this would be reflected as 20,000 (2.5% of the population). 
+
+First, we will visualize the results in the graph below.
+
+```{r fig.height=45,fig.width=30}
+totals = read.csv('seat_loss_gain.csv')
+totals = totals[,-1]
+rownames(totals) = totals$state
+totals = totals[,-1]
+intervals = seq(-1000000,1000000,10000)
+names = intervals
+names(totals) = names
+
+positives = totals[,c(101:201)]
+negatives = totals[,c(1:100)]
+
+library(dplyr)
 
 library(tidyr)
 library(ggplot2)
@@ -127,9 +217,7 @@ state_swings
 The following table provides a raw numerical look at how much population each state would have needed to gain or lose to add or remove a congressional seat in 2010 (again rounding the loss/gain up to the nearest 10,000). States marked with NA did not have a seat to lose. 
 
 ```{r}
-seatlosses = seatlosses[,c(3,4)]
-colnames(seatlosses) = c('Lose 1 Seat','Gain 1 Seat')
-seatlosses_toprint = seatlosses
+seatlosses_toprint = seatlosses[c(2,3)]
 seatlosses_toprint = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
 
 seatlosses_toprint
@@ -140,15 +228,91 @@ Here is the same information presented in percentage terms, with the same roundi
 Here, you can see more clearly that some states came *very* close to falling short of an extra seat or avoiding the loss of an extra seat.
 
 ```{r}
-
-populations = read.csv('statepops2010.csv',header=F)[c(1:50),2]
-
-seatlosses_per = seatlosses
-seatlosses_per$`Lose 1 Seat` = round((100*seatlosses_per$`Lose 1 Seat`/populations),1)
-seatlosses_per$`Gain 1 Seat` = round((100*seatlosses_per$`Gain 1 Seat`/populations),1)
-
-seatlosses_per
+seatlosses_per[c(2,3)]
 ```
+
+
+### 2020 Projections: Which States Walk The Line
+
+We will now provide similar projections for the 2020 US Census and the resulting congressional apportionment. We will use the most recent official state population projections available, those from the 2018 American Community Survey - with the caveat that these numbers (1) are estimates and (2) may generally increase by 2020.
+
+First, let's visualize the data again.
+
+```{r fig.height=45,fig.width=30}
+totals = read.csv('seat_loss_gain_2018.csv')
+totals = totals[,-1]
+rownames(totals) = totals$state
+totals = totals[,-1]
+intervals = seq(-1000000,1000000,10000)
+names = intervals
+names(totals) = names
+
+positives = totals[,c(101:201)]
+negatives = totals[,c(1:100)]
+
+gainoneseat = 10000*apply(positives,1,occurence,1)
+loseoneseat = transneg(apply(negatives,1,occurence,-1))
+states = read.csv('2018ACS.csv',header=F)[c(1:50),1]
+
+seatlosses_2018 = data.frame(states,loseoneseat,gainoneseat)
+colnames(seatlosses_2018) = c('state','Lose 1 Seat','Gain 1 Seat')
+
+populations_2018 = read.csv('2018ACS.csv',header=F)[c(1:50),2]
+
+seatlosses_per_2018 = seatlosses_2018
+seatlosses_per_2018$`Lose 1 Seat` = round((100*seatlosses_per_2018$`Lose 1 Seat`/populations_2018),1)
+seatlosses_per_2018$`Gain 1 Seat` = round((100*seatlosses_per_2018$`Gain 1 Seat`/populations_2018),1)
+
+
+graphing_tidy_2018 = gather(seatlosses_per_2018,key='key',val='val',-state)
+graphing_tidy_2018$val = graphing_tidy_2018$val/100
+
+state_swings_2018 = ggplot(graphing_tidy_2018) + 
+  geom_point(aes(y=fct_rev(state),x=val,color=fct_rev(key)),size=15) +
+  scale_color_manual(values=c('blue4','orangered3')) +
+  coord_cartesian(c(-.1,.1)) +
+  scale_x_continuous(breaks=seq(-.1,.1,.05),
+                     labels = scales::percent) +
+  geom_vline(xintercept=0,color='black') +
+  xlab('Swing Needed From 2018 Population To Add/Drop Seat(s)') +
+  ggtitle('How Close States Are To Gaining/Losing Congressional Seat In 2020') +
+  labs(subtitle='Based on 2018 ACS Population Estimates') +
+  theme(axis.ticks.y= element_blank(),
+        panel.grid.major.y = element_line(size=2,color='gray80'),
+        panel.background = element_blank(),
+        axis.text.x = element_text(size=40),
+        axis.text.y = element_text(size=40),
+        axis.title.y = element_blank(),
+        axis.title.x = element_text(size=55),
+        plot.title = element_text(size=55,hjust=0.5),
+        plot.subtitle = element_text(size=50,hjust=0.5),
+        legend.position = 'bottom',
+        legend.text = element_text(size=40),
+        legend.title = element_blank(),
+        legend.key.size = unit(0.7,'in'),
+        legend.spacing.x = unit(0.5, 'in')) 
+
+state_swings_2018
+```
+
+We can see some clear changes from 2010, with some new states sitting on the border.
+
+Let's look at these numbers in table form.
+
+```{r}
+seatlosses_toprint_2018 = seatlosses_2018[c(2,3)]
+seatlosses_toprint_2018 = format(seatlosses_toprint,scientific=FALSE,big.mark = ",", big.interval = 3)
+
+seatlosses_toprint_2018
+```
+
+Here's a look at these numbers as percentages of each state's population.
+
+```{r}
+seatlosses_per_2018[c(2,3)]
+```
+
+There are very clearly states that are either at serious risk of missing out on a congressional seat due to undercounting, or have an opportunity to gain another seat with a particularly robust count.
 
 # The Impact Of Undercounting
 
@@ -207,6 +371,29 @@ ucr_filtered_se = ucr_filtered_se[!is.na(ucr_filtered_se$uc),]
 ucr_filtered_se = ucr_filtered_se[,c(1:6)]
 ucr_filtered_se$`Lose 1 Seat` = ifelse(ucr_filtered_se$`Lose 1 Seat` == 0, '--',ucr_filtered_se$`Lose 1 Seat`)
 ucr_filtered_se$`Gain 1 Seat` = ifelse(ucr_filtered_se$`Gain 1 Seat` == 0, '--',ucr_filtered_se$`Gain 1 Seat`)
+
+ucr = seatlosses_2018
+ucr$`Lose 1 Seat` = round((100*ucr$`Lose 1 Seat`/populations_2018),1)
+ucr$`Gain 1 Seat` = round((100*ucr$`Gain 1 Seat`/populations_2018),1)
+
+undercount = read.csv('undercount.csv',sep='',header=F)
+undercount = undercount[,7:8]
+colnames(undercount) = c('uc','RMSE')
+
+ucr = cbind(ucr,undercount)
+
+ucr$miss_gain_raw = (-1) * ucr$uc > ucr$`Gain 1 Seat`
+ucr$avoided_loss = ucr$uc < ucr$`Lose 1 Seat`
+
+ucr_filtered_raw = ucr
+
+ucr_filtered_raw$`Lose 1 Seat` = ucr_filtered_raw$`Lose 1 Seat` * ucr_filtered_raw$avoided_loss
+ucr_filtered_raw$`Gain 1 Seat` = ucr_filtered_raw$`Gain 1 Seat` * ucr_filtered_raw$miss_gain_raw
+ucr_filtered_raw = ucr_filtered_raw[ucr_filtered_raw$`Lose 1 Seat` < 0 | ucr_filtered_raw$`Gain 1 Seat` > 0,]
+ucr_filtered_raw = ucr_filtered_raw[!is.na(ucr_filtered_raw$uc),]
+ucr_filtered_raw = ucr_filtered_raw[,1:3]
+ucr_filtered_raw$`Lose 1 Seat` = ifelse(ucr_filtered_raw$`Lose 1 Seat` == 0, '--',ucr_filtered_raw$`Lose 1 Seat`)
+ucr_filtered_raw$`Gain 1 Seat` = ifelse(ucr_filtered_raw$`Gain 1 Seat` == 0, '--',ucr_filtered_raw$`Gain 1 Seat`)
 ```
 
 ### Definitive Gains/Losses
@@ -219,20 +406,108 @@ Based on all the information we gathered, it appears a few states may have gaine
 
 **North Carolina**, meanwhile, would have gained a congressional seat with only .3% higher of a population, but was undercounted by .52% - meaning North Carolina likely lost out on an additional seat in 2010 because of an undercount - [although there are high hopes for this to be rectified in 2020](https://www.newsobserver.com/news/local/article223255775.html).
 
-### Within Margin Of Error
+### How A Similar Undercount Would Affect 2020
 
-Next, we will factor in margin of error, and consider which states *may* have lost a seat because of an undercount, and which states *may* have gained a seat because of an overcount.
+If the same level of undercounting (and overcounting) happened in 2020, which states might gain or lose a seat? 
 
-We used a +/-34% margin of error (see the data journalist's version of this article - linked to at the top of this one - for more detailed information and the reasoning behind this decision)
+**Ohio**'s current population would have it sitting just half a percent of the population away from losing a congressional seat. In 2010, it was overcounted by .83% - meaning that a failure to maintain rigorous counting again could lead to Ohio dropping a congressional seat it would have had with a proper count.
 
-Judging by our results, **California** may have avoided losing a congressional seat because of a lack of an undercount. It was undercounted by .26%, but our margin of error suggests it's reasonable to assume that it may have been overcounted by as much as .47% - and it came just .3% of population away from having one fewer congressional seat. So it's quite possible that mitigating an undercount saved California from losing a congressional seat.
+No states would miss out on the opportunity to add a seat judging by these population estimates and previous undercount margins, but this raises an important caveat.
 
-**Washington state** is in the same boat as California. We estimate that Washington came .4% of population loss away from losing a congressional seat, but it's reasonable to assume that it may have been overcounted by as much as 1.24% - so perhaps mitigating an undercount saved Washington the loss of a seat as well.
+**The states listed are not the only states that this analysis applies to.**
 
-Finally, it seems that **Missouri** potentially missed out on an additional seat because of an undercount. It was apparently overcounted by .66%, but we find it reasonable to assume that it may have been undercounted by .53% - which would have been enough to cost it the .5% population jump it needed to secure another seat.
+As it can be seen in our visualizations, many states are either very close to gaining or losing a seat, or could be thanks to undercounts and population variations. 
 
-We are quite happy to develop more precise numbers for your state, and help to calculate the percentage chance that it gained or lost out on a congressional seat because of census response rates (contact details below).
+**NewsCounts is happy to help you tailor a specific analysis for your state that helps determine how undercounting might cause it to miss out on (or add) an additional congressional seat in 2020.**
+
+Let's take a look at how some outlets have accomplished this so far.
+
+
+# How To Use This In A Story
+
+We now present a handful of local stories that have done a good job of illustrating the threat of undercounting towards apportionment in the 2020 Census. 
+
+We already shared two articles that did a good job of this for 2010 above, but the following stories do a good job of turning attention to the future, and what similar implications we could see in 2020.
+
+
+#### * [**Alabama is poised to lose 1 congressional seat. Could it lose 2?**](https://www.al.com/politics/2019/09/alabama-is-poised-to-lose-1-congressional-seat-could-it-lose-2.html) - John Sharp, AL.com
+
+*Gov. Kay Ivey’s office is relaying a similar message that two House seats are at risk if the state’s Census participation levels are similar to 2000, when just 68% of residents filled out Census forms. In 2010, state’s participation rate climbed but only slightly, registering 72%.*
+
+*...Census experts, however, say it would take a historic undercount of Alabama residents in order for the state to lose two seats. At least one longtime Census analyst believes that Alabama should be sending a different message: That Alabama can preserve all seven seats if participation rates rise.*
+
+*...Kimball Brace, who has been doing Census apportionment projections since the 1980s, said that Alabama is in range of saving all seven seats – so long as it delivers a strong Census headcount in 2020.*
+
+*According to Brace’s projections based on 2018 Census Bureau population estimates, Alabama needs to drive up its count by 40,764 people – slightly more than the population of the city of Florence – to maintain seven seats.*
+
+**NewsCounts Note**: helping to put undercounting numbers in perspective can give readers an idea of the consequences of not filling out forms and the direct impact they're having on apportionment, similar to voter turnout statistics
+
+
+#### * [**Will 2020 US Census be Montana's best shot at adding a congressional district?**](https://helenair.com/news/state-and-regional/govt-and-politics/will-us-census-be-montana-s-best-shot-at-adding/article_119114a4-329d-570c-bd1f-d41662cbfc75.html) - Holly Michels, Helena Independent Record
+
+*Kimball Brace, the president of a consulting firm called Election Data Services in Washington, D.C., that specializes in redistricting, said his firm’s methodology shows it’s fairly likely that Montana will gain a district, but by the narrowest of margins.*
+
+*“Montana needs another 13,000 people to answer the 2020 census,” he explained.*
+
+*...Back in the early 1990s, Joe Lamson was part of the ultimately failed effort that went all the way to the U.S. Supreme Court trying to keep Montana’s second seat in the U.S. House.*
+
+*...“Especially when you look at our growth rate for the last three years, we’ve been doing quite well. If that continues, we could coast across the line and pick up a seat. … In my lifetime, we’re the closest I’ve seen to getting a seat back," (Lamson said).*
+
+**NewsCounts Note**: more information on Election Data Services and Kimball Brace (mentioned multiple times in these articles) can be found [**here**](https://www.electiondataservices.com/kimball-w-brace/), and some of their research can be found [**here**](https://www.electiondataservices.com/wp-content/uploads/2019/12/NR_Appor19wTablesMaps.pdf).
+
+
+#### * [**Oregon could get new Congressional seat after 2020 census**](https://www.eastoregonian.com/news/state/oregon-could-get-new-congressional-seat-after-census/article_ef379218-e30d-5803-bf97-878fd240fe7b.html) - Jeff Mapes, Oregon Public Broadcasting
+
+*The Census Bureau estimates released Monday show that Oregon’s population growth — while slowing in the past year — remains strong enough to put the state in line for another seat.*
+
+*“I think you’re probably looking good” to gain an additional seat, said Kimball Brace, president of Election Data Services of Virginia. His firm uses several different models to project how congressional seats may be apportioned, and he said all of them show a sixth seat for Oregon.*
+
+*However, he and other forecasters caution that some uncertainties remain. There’s been controversy over whether some immigrant communities will be hesitant to participate in the 2020 census given the Trump administration’s moves to crack down on illegal immigration. And a major natural disaster or big economic shock could also have a sudden impact on the state’s population.*
+
+**NewsCounts Note**: with the proliferation of COVID-19, that last sentence rings truer than ever. Undercounting will likely be a bigger challenge in this census than in any census before, but there is also a unique opportunity to mitigate it given that forms can be filled out entirely online with no human interaction. The risk is bigger than ever, but so is the opportunity. Highlighting these stakes and this fact can strengthen any census story, and tie it into what's happening right now.
+
+
+#### * [**The four factors that might prevent Minnesota from losing a congressional seat after the 2020 Census**](https://www.minnpost.com/politics-policy/2020/01/the-four-factors-that-might-prevent-minnesota-from-losing-a-congressional-seat-after-the-2020-census/) - Peter Callaghan and Greta Kaul, MinnPost
+
+*Minnesota is likely going to lose one of its seats in the U.S. House after the next round of reapportionment — when the allocation of congressional seats is redistributed based on the 2020 Census — dropping the state’s current eight to seven.*
+
+*...The good news? There’s still a shot that the state could hold on to its eight current seats.*
+
+*...If Minnesota does miss out on keeping its eight seats, the remaining seven districts will be the sixth largest by population in the country, with roughly 809,000 people in each, based on state’s estimated population of 5.66 million people. Should it be able to hold that eighth seat, the districts would be more than 100,000 people smaller, or about 706,000.*
+
+*For comparison, by gaining enough for a second congressional seat, Montana’s estimated population of 1,074,909 will produce two districts of 537,455.*
+
+*It could be worse. Rhode Island, which is projected to go from two seats in the House to one, will have a single district representing 1,059,361 people. *
+
+*(State demographer Susan) Brower said she brings up the risk of larger districts when she speaks to groups — especially those in Greater Minnesota.“I ask them to imagine how far their districts would need to extend to encompass 100,000 more people,” she said. “It is so sparsely populated along that western edge of the state and in some counties in the south and in the north as well. They get kind of wide-eyed. They understand just how big those districts are going to have to grow.”*
+
+**NewsCounts Note**: adding or removing a seat will create a need for massive redistricting, which can shift balance of power in a state - this can play a key role in any apportionment swing story
+
+
+#### * [**California could lose a congressional district following 2020 census count**](https://www.latimes.com/california/story/2019-12-31/la-me-ln-california-apportionment-2020-census) - Sarah Parvini and John Myers, Los Angeles Times
+
+*California is poised to lose a congressional seat for the first time in its history as a state, based on U.S. Census Bureau population estimates released Monday that showed the nation’s growth continued to slow in 2019.*
+
+*...Paul Mitchell, one of the state’s leading analysts of the redistricting process, said that two places could dominate the discussion: the communities sitting at the intersection of Los Angeles, Orange and San Bernardino counties and the suburbs to the east of San Francisco.*
+
+*But other big changes to the political map-drawing process are also in store — including the 2013 ruling by the U.S. Supreme Court to strike part of the federal Voting Rights Act that strongly influenced the current California maps.*
+
+*“That will allow a massive rewrite of the Central Valley congressional districts, so it might be really hard to see the total impact” of losing a House seat because of population, Mitchell said.*
+
+*Even so, the most obvious political impact would be to force incumbent House members to either run against each other or leave office. In 2012, Rep. Brad Sherman (D-Northridge) defeated former Rep. Howard Berman in a bitter contest brought on by the new lines drawn in Los Angeles County.*
+
+*California’s future numerical strength in Congress hinges in part on making sure that members of historically undercounted groups are included in the census count. In California, 72% of the population belongs to one of these groups, according to the Public Policy Institute of California.*
+
+
+#### * [**Who Counts**](https://www.texasmonthly.com/news/what-texas-lose-census-doesnt-include-every-texan/) - Eric Benson, Texas Monthly
+
+*If everyone is counted only once, and in the right place, the 2020 census should be a moment of triumph for Texas. Over the past decade, only Utah has grown at a faster rate, and many demographers believe that after the 2020 census is tallied, Texas will gain three congressional districts (and three additional electoral votes), more than any other state. But in a study of congressional apportionment and the 2020 census, the demographers Amanda Baumle and Dudley Poston, of the University of Houston and Texas A&M, respectively, showed that Texas’s potential political gains rest heavily on counting its noncitizens, both those with legal status and those without. If everyone in the country were counted, Texas would gain three congressional seats. If everyone except undocumented immigrants were tallied, Texas would pick up two seats. If only citizens were counted, Texas would be down to just one new congressional district.*
+
+*...(El Paso state representative César) Blanco argues that if Texas doesn’t mount an aggressive census outreach, California will “eat our lunch,” since the Golden State plans to spend $154 million on the task. California is not an outlier. Twenty-nine states have launched complete-count efforts, a number that includes such Republican-controlled states as Georgia, which has earmarked $1.5 million for that purpose. So far, the Texas Legislature has not committed a cent.*
+
 
 # Want More?
 
-NewsCounts is happy to offer this data, answer any questions you may have about the information or the methodology, and offer help tailoring this dataset/simulation for your newsroom. Feel free to email [benjamin.livingston@columbia.edu](mailto:benjamin.livingston@columbia.edu) or post on the NewsCounts Slack channel (email Benjamin for an invite!) any time for help. 
+*NewsCounts* is happy to offer this data, answer any questions you may have about the information or the methodology, and offer help tailoring this dataset/simulation for your newsroom. We would love to help you create strong stories like those above.
+
+Feel free to email [benjamin.livingston@columbia.edu](mailto:benjamin.livingston@columbia.edu) or post on the NewsCounts Slack channel (email Benjamin for an invite!) any time for help. 
