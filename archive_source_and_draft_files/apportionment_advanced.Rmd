@@ -12,24 +12,24 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE,message=FALSE)
 ```
 
 
-##### **Please note this is the data journalists' version. Other journalists looking for a less technical explanation of our findings may access one here (ADD HYPERLINK).**
+##### **Please note this is the data journalists' version. Other journalists looking for a less technical explanation of our findings may access one here [here](https://bwliv.github.io/apportionment_journalists).**
 
 
 # Introduction
 
 ### Process
 
-In order to illustrate the consequences of undercounts in the 2010 and 2020 US Census, *NewsCounts* examined how census count swings could have either given an individual state an additional congressional representative, or conversely may have cost a state a chance at another representative in 2010 - and then performed the same analysis for 2020 using population projections.
+In order to illustrate the consequences of undercounts in the 2010 and 2020 US Census, *NewsCounts* examined how census count swings could have either given an individual state an additional congressional representative - or conversely may have cost a state a chance at another representative - in 2010, and then performed the same analysis for 2020 using recent population estimates.
 
 To do this, we calculated the number of approximate number of residents each state would have needed to gain according the [official census apportionment population count and algorithm](https://www.census.gov/prod/cen2010/briefs/c2010br-08.pdf) to add an additional congressional representative in the 2010s, and how much of a population dip it would have taken for the state to have one fewer representative. 
 
 We then conducted the same analysis for 2020 using state population estimates from the 2018 American Community Survey, in order to preview which states may gain or lose congressional seats in 2020 because of census undercounts or the mitigation of undercounts.
 
-*We will present the findings here, and at the end, provide a road map for using them in an article.*
+**We will present the findings here, and at the end, provide a road map for using them in an article.**
 
 ### Background
 
-Congressional apportionment is *not* determined by raw population - rather, it is determined by a scoring algorithm (as detailed in the link above). In short, each state is assigned a series of scores for each potential seat it can add based on a formula that factors in population and the number of seats the state has added so far, and then those scores are rank-ordered to determine what order the seats should be assigned in.
+Congressional apportionment is *not* determined by a population threshold - rather, it is determined by a scoring algorithm (as detailed in the link above). In short, each state is assigned a series of scores for each potential seat it can add based on a formula that factors in population and the number of seats the state has added so far, and then those scores are rank-ordered to determine what order the seats should be assigned in.
 
 We repurposed that algorithm and used it as an avenue to simulate certain population increases and declines in states, and see how a census undercount in a state (or lack thereof) may have led to it gaining or losing an additional seat.
 
@@ -43,7 +43,7 @@ These numbers are presented in tables both in terms of raw population numbers an
 
 First, we will visualize the results in the graph below. This graph shows how close each state came to gaining or losing a congressional seat as a percentage of its total population.
 
-States not shown either did not have a state to lose, or would have required too large of a population dip or jump to be shown on this graph.
+States not shown either did not have a seat to lose, or would have required too large of a population dip or jump to be shown on this graph.
 
 ```{r fig.height=45,fig.width=30}
 library(dplyr)
@@ -147,7 +147,7 @@ seatlosses_per[c(2,3)]
 
 ### 2020 Projections: Which States Walk The Line
 
-We will now provide similar projections for the 2020 US Census and the resulting congressional apportionment. We will use the most recent official state population projections available, those from the 2018 American Community Survey - with the caveat that these numbers (1) are estimates and (2) may generally increase by 2020.
+We will now provide similar projections for the 2020 US Census and the resulting congressional apportionment. We will use the most recent official state population projections available, those from the 2018 American Community Survey - with the caveat that these numbers (1) are estimates and (2) will generally increase by 2020.
 
 First, let's visualize the data again.
 
@@ -374,7 +374,7 @@ We already shared two articles that did a good job of this for 2010 above, but t
 
 *(State demographer Susan) Brower said she brings up the risk of larger districts when she speaks to groups — especially those in Greater Minnesota.“I ask them to imagine how far their districts would need to extend to encompass 100,000 more people,” she said. “It is so sparsely populated along that western edge of the state and in some counties in the south and in the north as well. They get kind of wide-eyed. They understand just how big those districts are going to have to grow.”*
 
-**NewsCounts Note**: adding or removing a seat will create a need for massive redistricting, which can shift balance of power in a state - this can play a key role in any apportionment swing story
+**NewsCounts Note**: adding or removing a seat will create a need for massive redistricting, which can shift balance of power in a state; this can play a key role in any apportionment swing story
 
 
 #### * [**California could lose a congressional district following 2020 census count**](https://www.latimes.com/california/story/2019-12-31/la-me-ln-california-apportionment-2020-census) - Sarah Parvini and John Myers, Los Angeles Times
