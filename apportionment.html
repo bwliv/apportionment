@@ -438,10 +438,10 @@ summary {
 
 </div>
 
-<a id="intro">
+<a id="intro"></a>
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<a id="process">
+<a id="process"></a>
 <div id="process" class="section level3">
 <h3>Process</h3>
 <p>In order to illustrate the consequences of undercounts in the 2010 and 2020 US Census, <em>NewsCounts</em> examined how census count swings could have either given an individual state an additional congressional representative - or conversely may have cost a state a chance at another representative - in 2010, and then performed the same analysis for 2020 using recent population estimates.</p>
@@ -456,7 +456,7 @@ summary {
 <p>The apportionment algorithm itself was run only once given its complexity (it was run 200 times for each state), and thus is is not included in this markdown. However, <a href="https://github.com/bwliv/apportionment/blob/master/apportioning.R">the source code is available here</a> for curious eyes.</p>
 </div>
 <div id="results-seats-nearly-gained-or-lost" class="section level3">
-<a id="2010">
+<a id="2010"></a>
 <h3>2010 Results: Seats Nearly Gained Or Lost</h3>
 <p>We will now present the results of our simulation for 2010.</p>
 <p>These numbers are presented in tables both in terms of raw population numbers and in terms of state population percentages. Necessary population increases/decreases were rounded up to the nearest 10,000, and this is reflected in the percentages as well - so if a state would have lost a seat with a population decrease of 16,734 (2.1% of the population), this would be reflected as 20,000 (2.5% of the population). In short, these numbers are correct, but a slightly smaller population jump (or dip) may have been enough as well.</p>
@@ -655,7 +655,7 @@ seatlosses_toprint</code></pre>
 ## Wyoming                 NA        79.2</code></pre>
 </div>
 <div id="projections-which-states-walk-the-line" class="section level3">
-<a id="2020">
+<a id="2020"></a>
 <h3>2020 Projections: Which States Walk The Line</h3>
 <p>We will now provide similar projections for the 2020 US Census and the resulting congressional apportionment. We will use the most recent official state population projections available, those from the 2018 American Community Survey - with the caveat that these numbers (1) are estimates and (2) will generally increase by 2020.</p>
 <p>First, let’s visualize the data again.</p>
@@ -827,7 +827,7 @@ seatlosses_toprint_2018</code></pre>
 <p>There are very clearly states that are either at serious risk of missing out on a congressional seat due to undercounting, or have an opportunity to gain another seat with a particularly robust count.</p>
 </div>
 </div>
-<a id="undercounting">
+<a id="undercounting"></a>
 <div id="the-impact-of-undercounting" class="section level1">
 <h1>The Impact Of Undercounting</h1>
 <p>Next, by infusing <a href="https://www.census.gov/coverage_measurement/pdfs/g01.pdf">information about the degrees of undercounts in various states</a>, we were able to determine which of these percentages is within the range of a state’s census undercount in 2010.</p>
@@ -868,7 +868,7 @@ ucr_filtered_raw[c(2,3)]</code></pre>
 <p><strong>NewsCounts is happy to help you tailor a specific analysis for your state that helps determine how undercounting might cause it to miss out on (or add) an additional congressional seat in 2020.</strong></p>
 <p>Let’s take a look at how some outlets have accomplished this so far.</p>
 </div>
-<a id="articles">
+<a id="articles"></a>
 <div id="how-to-use-this-in-a-story" class="section level1">
 <h1>How To Use This In A Story</h1>
 <p>We now present a handful of local stories that have done a good job of illustrating the threat undercounting poses to apportionment in the 2020 Census.</p>
@@ -921,7 +921,7 @@ ucr_filtered_raw[c(2,3)]</code></pre>
 <p><em>…(El Paso state representative César) Blanco argues that if Texas doesn’t mount an aggressive census outreach, California will “eat our lunch,” since the Golden State plans to spend $154 million on the task. California is not an outlier. Twenty-nine states have launched complete-count efforts, a number that includes such Republican-controlled states as Georgia, which has earmarked $1.5 million for that purpose. So far, the Texas Legislature has not committed a cent.</em></p>
 </div>
 </div>
-<a id="contact">
+<a id="contact"></a>
 <div id="want-more" class="section level1">
 <h1>Want More?</h1>
 <p>The full GitHub repo for this project <a href="https://github.com/bwliv/apportionment">is available here</a>.</p>
